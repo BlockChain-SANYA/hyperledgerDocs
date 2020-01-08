@@ -20,33 +20,35 @@
 * 编译`configtxgen`工具
 
 	* 如果运行在Linux，在Fabric目录下执行以下命令：
-		
+
 			cd $GOPATH/src/github.com/hyperledger/fabric
 			make configtxgen
 			# 如果出错：'ltdl.h' file not found
 			sudo apt install libtool libltdl-dev
 			# 然后再运行make
 			make configtxgen
-	
+
 	* 如果运行在OSX，先安装Xcode 8.0或以上版本，然后在Fabric目录下执行以下命令：
-	
+
 			# 安装 Homebrew
 			/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 			# 添加 gnu-tar
-			brew install gnu-tar --with-default-names
+			brew install gnu-tar
+			# 将gnu导入到系统环境变量里
+			export PATH="/usr/local/opt/gnu-tar/libexec/gnubin:$PATH"
 			# 添加 libtool
 			brew install libtool
 			# 编译 configtxgen
 			make configtxgen
-	
+
 		编译成功后输出：
-	
+
 			build/bin/configtxgen
 			CGO_CFLAGS=" " GOBIN=/Users/johndoe/work/src/github.com/hyperledger/fabric/build/bin go install -ldflags "-X github.com/hyperledger/fabric/common/metadata.Version=1.0.0-snapshot-8d3275f -X github.com/hyperledger/fabric/common /metadata.BaseVersion=0.3.0 -X github.com/hyperledger/fabric/common/metadata.BaseDockerLabel=org.hyperledger.fabric"       github.com/hyperledger/fabric/common/configtx/tool/configtxgen
 			Binary available as build/bin/configtxgen``
-		
+
 	编译后执行文件放在Fabric目录下的的`build/bin/configtxgen`
-	
+
 ## 执行完整脚本
 
 为了加快部署过程，我们提供了一个脚本来执行所有任务。执行该脚本会生成配置结果、本地网络、Chaincode测试。
@@ -56,7 +58,7 @@
 	# 使脚本可执行
 	chmod +x download-dockerimages.sh
 	# 执行脚本
-	./download-dockerimages.sh	
+	./download-dockerimages.sh
 
 这个过程会需要几分钟，脚本执行后输出：
 
@@ -103,11 +105,11 @@
 	dev-peer3-mycc-1.0             latest               13f6c8b042c6        5 minutes ago       176 MB
 	dev-peer0-mycc-1.0             latest               e27456b2bd92        5 minutes ago       176 MB
 	dev-peer2-mycc-1.0             latest               111098a7c98c        5 minutes ago       176 MB
-	
+
 删除这些镜像：
 
 	docker rmi <IMAGE ID> <IMAGE ID> <IMAGE ID>
-	
+
 例如：
 
 	docker rmi -f 13f e27 111
@@ -165,7 +167,7 @@ orderer block是ordering服务的创世区块；channel transaction文件在crea
 如果之前创建了一个channel名，就必须将其作为参数，否则使用默认的`mychannel`。例如：
 
 	CHANNEL_NAME=mychannel docker-compose up -d
-	
+
 等待一会儿，因为背后有交易会发送到peer。执行`docker ps`查看运行状态的container，可以看到如下内容：
 
 	vagrant@hyperledger-devenv:v0.3.0-4eec836:/opt/gopath/src/github.com/hyperledger/fabric/examples/e2e_cli$ docker ps
@@ -200,9 +202,9 @@ Chaincode必须被install到一个peer上才能成功的对这个peer的ledger�
 ### 查看交易
 
 查看CLI容器的log：
-	
+
 	docker logs -f cli
-	
+
 输出：
 
 	2017-02-28 04:31:20.841 UTC [logging] InitFromViper -> DEBU 001 Setting default logging level to DEBUG for command 'chaincode'
@@ -228,7 +230,7 @@ Chaincode必须被install到一个peer上才能成功的对这个peer的ledger�
 	CHANNEL_NAME=<channel-id> docker-compose up -d
 
 在第二个终端查看log：
-	
+
 	docker logs -f cli
 
 这将实时输出通过`script.sh`执行的交易信息。
@@ -323,7 +325,7 @@ Chaincode必须被install到一个peer上才能成功的对这个peer的ledger�
 由于此例的`peer channel create`命令是针对orderer的，所以需要修改之前的环境变量，因此上边的命令应该是：
 
 	CORE_PEER_MSPCONFIGPATH=$GOPATH/src/github.com/hyperledger/fabric/peer/crypto/orderer/localMspConfig CORE_PEER_LOCALMSPID="OrdererMSP" peer channel create -o orderer0:7050 -c mychannel -f crypto/orderer/channel.tx --tls $CORE_PEER_TLS_ENABLED --cafile $GOPATH/src/github.com/hyperledger/fabric/peer/crypto/orderer/localMspConfig/cacerts/ordererOrg0.pem
-	
+
 **注意：**下面的其他命令依然在CLI容器中执行，而且要记住命令里每个peer对应的环境变量
 
 ### Join channel
@@ -336,7 +338,7 @@ Chaincode必须被install到一个peer上才能成功的对这个peer的ledger�
 完整的命令应该是：
 
 	CORE_PEER_MSPCONFIGPATH=$GOPATH/src/github.com/hyperledger/fabric/peer/crypto/peer/peer0/localMspConfig CORE_PEER_ADDRESS=peer0:7051 CORE_PEER_LOCALMSPID="Org0MSP" CORE_PEER_TLS_ROOTCERT_FILE=$GOPATH/src/github.com/hyperledger/fabric/peer/crypto/peer/peer0/localMspConfig/cacerts/peerOrg0.pem peer channel join -b mychannel.block
-	
+
 修改这四个环境变量将其他的peer加入到channel中
 
 ### Install chaincode
@@ -358,12 +360,12 @@ Chaincode必须被install到一个peer上才能成功的对这个peer的ledger�
 
 	# 在命令前面要加上peer对应的四个环境变量
 	peer chaincode invoke -o orderer0:7050  --tls $CORE_PEER_TLS_ENABLED --cafile $GOPATH/src/github.com/hyperledger/fabric/peer/crypto/orderer/localMspConfig/cacerts/ordererOrg0.pem  -C mychannel -n mycc -c '{"Args":["invoke","a","b","10"]}'
-	
+
 ### Query chaincode
 
 	# 在命令前面要加上peer对应的四个环境变量
 	peer chaincode query -C mychannel -n mycc -c '{"Args":["query","a"]}'
-	
+
 执行结果：
 
 	Query Result: 90
@@ -389,21 +391,21 @@ Chaincode必须被install到一个peer上才能成功的对这个peer的ledger�
 	hyperledger/fabric-ccenv       x86_64-0.7.0-snapshot-a0d032b   0ce0e7dc043f        12 minutes ago      1.29 GB
 	hyperledger/fabric-baseimage   x86_64-0.3.0                    f4751a503f02        4 weeks ago         1.27 GB
 	hyperledger/fabric-baseos      x86_64-0.3.0                    c3a4cf3b3350        4 weeks ago         161 MB
-	
+
 ## 使用本地二进制文件
 
 进去vagrant环境：
 
 	cd $GOPATH/src/github.com/hyperledger/fabric/devenv
-	
-	# 第一次启动VM用 vagrant up 
+
+	# 第一次启动VM用 vagrant up
 	vagrant ssh
 
 在fabric目录下编译peer和orderer：
-	
+
 	make clean
 	make native
-	
+
 生成`ccenv `镜像：
 
 	make peer-docker
@@ -431,7 +433,7 @@ Chaincode必须被install到一个peer上才能成功的对这个peer的ledger�
 创建 channel configuration transaction：
 
 	configtxgen -profile SampleSingleMSPSolo -outputCreateChannelTx channel.tx -channelID <channel-ID>
-	
+
 执行成功会在当前目录生成`channel.tx`
 
 #### 终端3
@@ -457,9 +459,9 @@ Chaincode必须被install到一个peer上才能成功的对这个peer的ledger�
 ### Install chaincode
 
 在peer上安装chaincode：
-	
+
 	peer chaincode install -o 127.0.0.1:7050 -n mycc -v 1.0 -p github.com/hyperledger/fabric/examples/chaincode/go/chaincode_example02
-	
+
 执行成功后查看文件可以看到`mycc.1.0`:
 
 	ls /var/hyperledger/production/chaincodes
@@ -469,7 +471,7 @@ Chaincode必须被install到一个peer上才能成功的对这个peer的ledger�
 实例化chaincode：
 
 	peer chaincode instantiate -o 127.0.0.1:7050 -C mychannel -n mycc -v 1.0 -p github.com/hyperledger/fabric/examples/chaincode/go/chaincode_example02 -c '{"Args":["init","a", "100", "b","200"]}'
-	
+
 `docker ps`查看运行中的容器，如果chaincode启动成功，则显示：
 
 	CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS               NAMES
@@ -478,7 +480,7 @@ Chaincode必须被install到一个peer上才能成功的对这个peer的ledger�
 ### Invoke chaincode
 
 调用chaincode从“a”转移“10”给“b“：
-	
+
 	peer chaincode invoke -o 127.0.0.1:7050 -C mychannel -n mycc -c '{"Args":["invoke","a","b","10"]}'
 
 ### Query chaincode
@@ -499,25 +501,25 @@ Chaincode必须被install到一个peer上才能成功的对这个peer的ledger�
 为了使用CouchDB，除了最前面的”前提“一节的操作外，还需要下边两步启动CouchDB容器并将之与peer容器关联：
 
 * 构建CouchDB镜像：
-	
+
 		# make sure you are in the fabric directory
 		make couchdb
-		
+
 * 编辑`fabric/examples/e2e_cli/docker-compose.yaml`和`docker-compose.yam`，将所有与CouchDB有关的内容取消注释。这样`chaincode_example02`就可以才CouchDB下运行了。
-	
+
 **注意：**如果将CouchDB容器的端口映射的主机，请一定要注意安全。在开发环境中将端口映射出来可以通过CouchDB的web界面可视化操作数据。生产环境中一般不会做端口映射，以限制CouchDB的外部访问。
-	
+
 可以用`chaincode_example02`在CouchDB下执行上边的chaincode操作，但是为了使用CouchDB的复杂查询功能，chaincode数据一定要以JSON格式存储（例如`fabric/examples/chaincode/go/marbles02 `）。
 
 使用`手动执行交易`这一节中的步骤install、instantiate、invoke和query `marbles02`，执行完`Join channel`这步后使用下边的命令操作`marbles02`：
 
 * 在`PEER0`上安装并实例化chaincode
-		
+
 		peer chaincode install -o orderer0:7050 -n marbles -v 1.0 -p github.com/hyperledger/fabric/examples/chaincode/go/marbles02
 		peer chaincode instantiate -o orderer0:7050 --tls $CORE_PEER_TLS_ENABLED --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/orderer/localMspConfig/cacerts/ordererOrg0.pem -C mychannel -n marbles -v 1.0 -p github.com/hyperledger/fabric/examples/chaincode/go/marbles02 -c '{"Args":["init"]}' -P "OR ('Org0MSP.member','Org1MSP.member')"
-		
+
 * 创建一些marble并移动它们
-		
+
 		peer chaincode invoke -o orderer0:7050 --tls $CORE_PEER_TLS_ENABLED --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/orderer/localMspConfig/cacerts/ordererOrg0.pem -C mychannel -n marbles -c '{"Args":["initMarble","marble1","blue","35","tom"]}'
 		peer chaincode invoke -o orderer0:7050 --tls $CORE_PEER_TLS_ENABLED --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/orderer/localMspConfig/cacerts/ordererOrg0.pem -C mychannel -n marbles -c '{"Args":["initMarble","marble2","red","50","tom"]}'
 		peer chaincode invoke -o orderer0:7050 --tls $CORE_PEER_TLS_ENABLED --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/orderer/localMspConfig/cacerts/ordererOrg0.pem -C mychannel -n marbles -c '{"Args":["initMarble","marble3","blue","70","tom"]}'
@@ -526,54 +528,54 @@ Chaincode必须被install到一个peer上才能成功的对这个peer的ledger�
 		peer chaincode invoke -o orderer0:7050 --tls $CORE_PEER_TLS_ENABLED --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/orderer/localMspConfig/cacerts/ordererOrg0.pem -C mychannel -n marbles -c '{"Args":["delete","marble1"]}'
 
 * 如果做了CouchDB容器的端口映射，可以通过web界面查看数据，可以看到名为`mychannel `的数据库及其文档
-	
+
 	* 如果使用的是vagrant环境
-		
+
 			http://localhost:15984/_utils
 	* 如果不是vagrant环境，使用CouchDB容器指定的端口
-			
+
 			http://localhost:5984/_utils
 * 可有规律的查询chaincode（例如，读取`marble2`）
 
 		peer chaincode query -C mychannel -n marbles -c '{"Args":["readMarble","marble2"]}'
-	
+
 	可以看到`marble2`的详细信息：
-		
+
 		Query Result: {"color":"red","docType":"marble","name":"marble2","owner":"jerry","size":50}
-	
+
 	获取`marble1`的历史：
-		
+
 		peer chaincode query -C mychannel -n marbles -c '{"Args":["getHistoryForMarble","marble1"]}'
-	
+
 	可以看到操作过`marble1`的交易：
-	
+
 		Query Result: [{"TxId":"1c3d3caf124c89f91a4c0f353723ac736c58155325f02890adebaa15e16e6464", "Value":{"docType":"marble","name":"marble1","color":"blue","size":35,"owner":"tom"}},{"TxId":"755d55c281889eaeebf405586f9e25d71d36eb3d35420af833a20a2f53a3eefd", "Value":{"docType":"marble","name":"marble1","color":"blue","size":35,"owner":"jerry"}},{"TxId":"819451032d813dde6247f85e56a89262555e04f14788ee33e28b232eef36d98f", "Value":}]
-	
+
 	还可以执行复杂查询，比如查询`jerry`所拥有的marble：
-		
+
 		peer chaincode query -C mychannel -n marbles -c '{"Args":["queryMarblesByOwner","jerry"]}'
-	
+
 	查询结果为`jerry`所拥有的2个marble的信息：
-	
+
 		Query Result: [{"Key":"marble2", "Record":{"color":"red","docType":"marble","name":"marble2","owner":"jerry","size":50}},{"Key":"marble3", "Record":{"color":"blue","docType":"marble","name":"marble3","owner":"jerry","size":70}}]
-		
+
 	通过`owner`字段等于`jerry`查询：
-		
+
 		peer chaincode query -C mychannel -n marbles -c '{"Args":["queryMarbles","{\"selector\":{\"owner\":\"jerry\"}}"]}'
-	
+
 	查询结果如下：
-		
+
 		Query Result: [{"Key":"marble2", "Record":{"color":"red","docType":"marble","name":"marble2","owner":"jerry","size":50}},{"Key":"marble3", "Record":{"color":"blue","docType":"marble","name":"marble3","owner":"jerry","size":70}}]
-		
+
 ## 数据持久化
 
 如果需要对peer或CouchDB容器的数据持久化，一种选择是将容器的相关目录挂在到docker主机。例如，将下面两行内容放到`docker-compose.yaml`文件中的对应peer处：
-	
+
 	volumes:
 	 - /var/hyperledger/peer0:/var/hyperledger/production
 
 将下面两行放到对应的CouchDB处：
-	
+
 	volumes:
  	- /var/hyperledger/couchdb0:/opt/couchdb/data
 
@@ -581,19 +583,19 @@ Chaincode必须被install到一个peer上才能成功的对这个peer的ledger�
 
 * 每次运行后要清理文件
 * 如果出现docker错误，则删除镜像，从头再操作一遍
-		
+
 		make clean
 		make peer-docker orderer-docker
 
 * 如果出现下面的错误
-		
+
 		Error: Error endorsing chaincode: rpc error: code = 2 desc = Error installing chaincode code mycc:1.0(chaincode /var/hyperledger/production/chaincodes/mycc.1.0 exits)
-	
+
 	chaincode镜像（如`dev-peer0-mycc-1.0`或`dev-peer1-mycc-1.0`）可能是以前运行过的。删除它们然后重试。
-	
+
 		docker rmi -f $(docker images | grep peer[0-9]-peer[0-9] | awk '{print $3}')
-		
+
 * 使用`down`选项清理网络
-		
+
 		./network_setup.sh down
 		Next  Previous
